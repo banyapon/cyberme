@@ -36,6 +36,18 @@ Developed by **College of Creative Design and Entertainment Technology (ANT DPU)
 git clone https://github.com/banyapon/cyberme.git
 cd cyberme
 ```
+Create a .env file in the project root and add the following variables:
+```bash
+PORT=5000
+FIREBASE_STORAGE_BUCKET=YOU_VALUE
+FIREBASE_DATABASE_URL=YOU_VALUE
+FACESWAP_API_KEY=YOU_VALUE
+FIREBASE_AUTH_DOMAIN=YOU_VALUE
+FIREBASE_PROJECT_ID=YOU_VALUE
+FIREBASE_MESSAGING_SENDER_ID=YOU_VALUE
+FIREBASE_APP_ID=YOU_VALUE
+FIREBASE_MEASUREMENT_ID=YOU_VALUE
+```
 
 ### 2️⃣ **Set Up Firebase Credentials**
 Before running the project, **create a Firebase service account key**:
