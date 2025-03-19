@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Camera | CYBER.ME</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/styles.css">
+    <style>
+        /* ปรับสไตล์เพิ่มเติม */
+        #video {
+            border: 2px solid #333;
+            width: 100%;
+            max-width: 640px;
+            height: auto;
+        }
+
+        #canvas {
+            display: none;
+        }
+
+        #uploadStatus {
+            margin-top: 10px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body class="cyber-frame">
+    <div class="container my-4 snapshot-container">
+
+        <div class="signin-container">
+            <div class="camera-top">
+                <div>
+                    <video id="video" autoplay></video>
+                    <canvas id="canvas" width="640" height="480" class="entercanvas"></canvas>
+                </div>
+                <div>
+                    <button id="captureBtn" class="btn btn-primary mt-3 cyberme-button-camera"><i
+                            class="fa-solid fa-camera"></i> TAKE PHOTO</button>
+                </div>
+                <div>
+                    <button id="uploadBtn" class="btn btn-success mt-3" style="display: none;"> </button>
+                    <p id="uploadStatus"></p>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+    <!-- Loading Indicator -->
+    <div id="loadingOverlay"
+        style="display: none !important; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); display: flex; justify-content: center; align-items: center; z-index: 1050;">
+        <div class="spinner-border text-light" role="status">
+            <span class="visually-hidden">Processing...</span>
+        </div>
+        <p class="text-light ms-2">Processing...</p>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal fade" id="resultModal" tabindex="-1" aria-labelledby="resultModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="resultModalLabel">CYBERME</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <img id="swappedImage" src="" class="img-fluid-x" alt="Swapped Image">
+                </div>
+                <div class="modal-footer">
+                    <a id="downloadBtn" class="btn btn-success" download>Download Image</a>
+                    <button id="closeBtn" type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs สำหรับการเริ่มต้น (ใช้สำหรับฟังก์ชันอื่น ๆ หากต้องการ) -->
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+    <!-- Bootstrap Bundle JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- JavaScript สำหรับถ่ายภาพและส่งข้อมูลไปยัง /play -->
+    <script>
+        // กำหนดค่าการเริ่มต้นของ Firebase (ถ้าจำเป็นสำหรับฟังก์ชันอื่น ๆ)
+        fetch('/firebase-config')
+            .then(response => response.json())
+            .then(config => {
+                firebase.initializeApp(config);
+            })
+            .catch(error => console.error("Error loading Firebase config:", error));
+
+
+        // ดึง element ต่างๆ จาก DOM
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const captureBtn = document.getElementById('captureBtn');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const uploadStatus = document.getElementById('uploadStatus');
+
+        // เริ่มใช้งาน webcam
+        navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+            .then(stream => {
+                video.srcObject = stream;
+                video.play();
+                window.stream = stream; // เก็บ stream ไว้เพื่อปิดทีหลัง
+            })
+            .catch(err => {
+                console.error("Error accessing webcam:", err);
+                uploadStatus.textContent = "ไม่สามารถเข้าถึงกล้องได้";
+            });
+
+        // เมื่อคลิกปุ่ม Capture Photo ให้จับภาพจาก video ลงใน canvas และปิด webcam
+        captureBtn.addEventListener('click', () => {
+            const context = canvas.getContext('2d');
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // ซ่อนวิดีโอและแสดงภาพที่ถ่าย
+            video.style.display = 'none';
+            canvas.style.display = 'block';
+
+            // ปิดกล้อง
+            stopCamera();
+
+            // แสดงปุ่มอัปโหลด
+            captureBtn.style.display = 'none';
+            uploadBtn.style.display = 'inline-block';
+            uploadStatus.textContent = "ถ่ายภาพเรียบร้อยแล้วพร้อม Upload";
+        });
+
+        // เมื่อคลิกปุ่ม Upload Photo ให้แปลง canvas เป็น Blob แล้วส่งไปยัง server ที่ endpoint /play
+        uploadBtn.addEventListener('click', () => {
+            document.getElementById('loadingOverlay').style.display = 'block';
+            canvas.toBlob(blob => {
+                if (!blob) {
+                    console.error("Failed to convert canvas to Blob.");
+                    uploadStatus.textContent = "Failed to process image.";
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append('file', blob, 'avatar.jpg');
+                formData.append('cameraId', "<%= cameraId %>");
+                //formData.append('cameraId', cameraId);
+
+                fetch('/play', {
+                    method: 'POST',
+                    body: formData
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.swappedImageUrl) {
+                            document.getElementById('swappedImage').src = data.swappedImageUrl;
+                            document.getElementById('downloadBtn').href = data.swappedImageUrl;
+                            uploadToFirebase(data.swappedImageUrl);
+                            var myModal = new bootstrap.Modal(document.getElementById('resultModal'));
+                            myModal.show();
+                            document.getElementById('loadingOverlay').style.display = 'none';
+                        } else {
+                            uploadStatus.textContent = "Face swap failed.";
+                        }
+                    })
+                    .catch(err => {
+                        console.error("Error uploading file:", err);
+                        uploadStatus.textContent = 'SYSTEM PROGRESS';
+                    });
+            }, 'image/jpeg', 0.6);  // 🔹 Reduce image quality to 60%
+
+
+        });
+
+        function uploadToFirebase(imageUrl) {
+            fetch(imageUrl) // ดาวน์โหลดไฟล์จาก URL ที่ได้จากเซิร์ฟเวอร์
+                .then(response => response.blob()) // แปลงเป็น Blob
+                .then(blob => {
+                    const storageRef = firebase.storage().ref();
+                    const fileName = `results/avatar_${Date.now()}.jpg`; // สร้างชื่อไฟล์
+                    const fileRef = storageRef.child(fileName);
+
+                    // อัปโหลดภาพไปยัง Firebase Storage
+                    fileRef.put(blob).then(snapshot => {
+                        console.log("Image uploaded to Storage!");
+
+                        // รับ URL ของไฟล์ที่อัปโหลด
+                        snapshot.ref.getDownloadURL().then(downloadURL => {
+                            console.log("Download URL:", downloadURL);
+
+                            // บันทึก URL ลงใน Realtime Database
+                            saveImageToDatabase(downloadURL);
+                        });
+                    });
+                })
+                .catch(error => console.error("Error uploading to Firebase Storage:", error));
+        }
+
+        // บันทึก URL ของรูปลงใน Realtime Database ที่ "avatars/"
+        function saveImageToDatabase(imageURL) {
+            const db = firebase.database();
+            const avatarsRef = db.ref("avatars");
+
+            const newAvatarRef = avatarsRef.push(); // สร้าง key ใหม่
+            newAvatarRef.set({
+                imageUrl: imageURL,
+                timestamp: Date.now()
+            }).then(() => {
+                console.log("Image URL saved to Realtime Database!");
+            }).catch(error => {
+                console.error("Error saving to Realtime Database:", error);
+            });
+        }
+
+
+        function stopCamera() {
+            if (window.stream) {
+                let tracks = window.stream.getTracks();
+                tracks.forEach(track => track.stop()); // ปิดทุก Track ของกล้อง
+                video.srcObject = null;
+            }
+        }
+    </script>
+
+</body>
+
+</html>

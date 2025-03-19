@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>People | CYBER.ME</title>
+    <link rel="stylesheet" href="/styles.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+
+</head>
+<style>
+    /* === Modal พื้นหลัง === */
+    .modal {
+        display: none;
+        /* ซ่อน Modal ไว้ก่อน */
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.8);
+        /* พื้นหลังดำโปร่ง */
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    /* === ปุ่มปิด Modal === */
+    .close {
+        position: absolute;
+        top: 15px;
+        right: 25px;
+        color: white;
+        font-size: 30px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+    /* === ภาพภายใน Modal === */
+    .modal-content {
+        max-width: 90%;
+        /* ค่าเริ่มต้นสำหรับ Mobile */
+        max-height: 90vh;
+        border-radius: 10px;
+    }
+
+    /* === ปรับขนาด Modal ตามอุปกรณ์ === */
+    @media (min-width: 768px) {
+        .modal-content {
+            max-width: 35%;
+            /* สำหรับ Desktop */
+        }
+    }
+</style>
+
+<body class="cyber-frame">
+    <div class="signin-container">
+        <div class="policy-top">
+            <div class="row white-box cyberme-pc">
+                <div class="col-sm-9">
+                    <img class="cyberme-feed-small" src="/images/feed-logo.png" alt="Feed Logo" />
+                </div>
+                <div class="col-sm-3">
+                    <a href="https://cyberme.vercel.app/"><img class="cyberme-back" src="/images/back.png" alt="Vector Icon" /></a>
+                </div>
+            </div>
+
+            <div class="row white-box cyberme-mobile">
+                <div class="col-sm-12">
+                    <img class="cyberme-feed-small" src="/images/feed-logo.png" alt="Feed Logo" />
+                </div>
+            </div>
+
+            <!-- Scroll Wrapper -->
+            <div class="scroll-wrapper">
+                <div id="avatarGrid" class="avatar-container">
+                    <!-- Avatar Grid จะโหลดข้อมูลที่นี่ -->
+                </div>
+            </div>
+            
+        </div>
+        
+    </div>
+    <!-- Modal สำหรับแสดงภาพขยาย -->
+    <div id="avatarModal" class="modal">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <img id="modalImage" class="modal-content">
+    </div>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        const avatars = JSON.parse(`<%- JSON.stringify(avatars) %>`); // ✅ แปลงกลับเป็น JSON Object
+        let lastKey = null;
+        let loading = false;
+
+        console.log("Parsed Avatars:", avatars); // ✅ Debug JSON Data
+        closeModal();
+
+        function loadAvatars(data) {
+            const grid = document.getElementById('avatarGrid');
+
+            data.forEach((avatar) => {
+                const div = document.createElement('div');
+                div.innerHTML = `
+            <a href="javascript:void(0);" onclick="openModal('${avatar.swappedImageUrl}')">
+                <img src="${avatar.swappedImageUrl}" alt="Avatar">
+            </a>
+        `;
+                grid.appendChild(div);
+            });
+
+            if (data.length > 0) {
+                lastKey = data[data.length - 1].id;
+            }
+
+            loading = false;
+        }
+
+        /* === ฟังก์ชันเปิด Modal === */
+        function openModal(imageUrl) {
+            const modal = document.getElementById('avatarModal');
+            const modalImg = document.getElementById('modalImage');
+
+            modal.style.display = "flex";
+            modalImg.src = imageUrl;
+        }
+
+        /* === ฟังก์ชันปิด Modal === */
+        function closeModal() {
+            document.getElementById('avatarModal').style.display = "none";
+        }
+
+
+        // โหลดข้อมูลเริ่มต้น
+        loadAvatars(avatars);
+
+
+        // ฟังก์ชันโหลดเพิ่มเติมเมื่อ Scroll ลงล่างสุด
+        function fetchMoreAvatars() {
+            if (loading || !lastKey) return;
+            loading = true;
+
+            fetch(`/people/load-more?lastKey=${lastKey}`)
+                .then(response => response.json())
+                .then(newAvatars => {
+                    loadAvatars(newAvatars);
+                })
+                .catch(error => console.error("Error loading more avatars:", error));
+        }
+
+        // ดักจับการ Scroll แล้วโหลดข้อมูลเพิ่ม
+        document.querySelector('.scroll-wrapper').addEventListener('scroll', function () {
+            if (this.scrollTop + this.clientHeight >= this.scrollHeight - 10) {
+                fetchMoreAvatars();
+            }
+        });
+    </script>
+</body>
+
+</html>
