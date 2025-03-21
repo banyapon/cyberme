@@ -56,6 +56,8 @@ const sessionRouter = require('./routes/session');
 const cameraRouter = require('./routes/camera');
 const playRouter = require('./routes/play');
 const peopleRouter = require('./routes/people');
+const adminRoutes = require("./routes/admin");
+const resultRouter = require('./routes/result');
 
 app.use('/', indexRouter);
 app.use('/signin', signinRouter);
@@ -64,6 +66,8 @@ app.use('/sessionLogin', sessionRouter);
 app.use('/camera', cameraRouter);
 app.use('/play', playRouter);
 app.use('/people', peopleRouter);
-
+app.use(express.urlencoded({ extended: true }));
+app.use("/admin", adminRoutes);
+app.use('/result', resultRouter);
 
 module.exports = app;

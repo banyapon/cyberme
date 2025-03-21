@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Panel | Cyber.Me</title>
+    <link rel="stylesheet" href="/styles.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body class="cyber-frame">
+    <div class="container mt-4">
+        <h2 class="adminText">Admin Panel - Manage Avatars</h2>
+
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Avatar</th>
+                    <th>Camera ID</th>
+                    <th>Update</th>
+                    <th>Delete</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% if (avatars.length > 0) { %>
+                    <% avatars.forEach(avatar => { %>
+                        <tr>
+                            <td><img src="<%= avatar.swappedImageUrl %>" alt="Avatar" width="100"></td>
+                            <td><%= avatar.cameraId || 'N/A' %></td>
+                            <td>
+                                <!-- Upload New Image -->
+                                <form action="/admin/update/<%= avatar.id %>" method="POST" enctype="multipart/form-data">
+                                    <input type="text" name="cameraId" value="<%= avatar.cameraId %>" required>
+                                    <input type="file" name="newImage">
+                                    <button type="submit" class="btn btn-primary btn-sm">Update</button>
+                                </form>
+                            </td>
+                            <td>
+                                <!-- Delete Avatar -->
+                                <form action="/admin/delete/<%= avatar.id %>" method="POST" onsubmit="return confirm('Are you sure?');">
+                                    <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                    <% }); %>
+                <% } else { %>
+                    <tr>
+                        <td colspan="4" class="text-center">No Avatars Found</td>
+                    </tr>
+                <% } %>
+            </tbody>
+            
+        </table>
+
+        <!-- Pagination Controls -->
+        <nav>
+            <ul class="pagination justify-content-center">
+                <% if (hasPrevPage) { %>
+                    <li class="page-item">
+                        <a class="page-link" href="/admin?page=<%= currentPage - 1 %>&lastKey=<%= prevPageKey %>">Previous</a>
+                    </li>
+                <% } %>
+                <li class="page-item active">
+                    <span class="page-link"><%= currentPage %></span>
+                </li>
+                <% if (hasNextPage) { %>
+                    <li class="page-item">
+                        <a class="page-link" href="/admin?page=<%= currentPage + 1 %>&lastKey=<%= nextPageKey %>">Next</a>
+                    </li>
+                <% } %>
+            </ul>
+        </nav>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
