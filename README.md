@@ -1,7 +1,8 @@
 # 🚀 Openhouse DPU 2025 - Cyberpunk Avatar Faceswap  
 
 **Dhurakij Pundit University (DPU) | College of Creative Design and Entertainment Technology (ANT DPU)**  
-**Project Lead:** *Asst. Prof. Banyapon Poolsawas, Deputy Dean*  
+**Project Lead:** *Asst. Prof. Banyapon Poolsawas, Deputy Dean*, 
+**UI Design:** *Puyyarphath Wilo*
 
 ## 🎭 Cyberpunk Avatar Faceswap  
 
